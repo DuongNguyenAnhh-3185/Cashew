@@ -15,27 +15,42 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# ==============================================================================
+# NHIỆM VỤ: KIỂM TRA VÀ CẤU HÌNH CÁC GÓI PHỤ THUỘC (DEPENDENCIES)
+# Người thực hiện: Thu Hoài
+# Mô tả: Cập nhật và kiểm tra tính tương thích của các thư viện với Flutter SDK 3.47+
+# ==============================================================================
+
 version: 5.4.3+416
 
 environment:
+  # Yêu cầu Flutter/Dart SDK phiên bản từ 3.0.0 trở lên
   sdk: ">= 3.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # --- [1] Thư viện giao diện, hoạt họa (UI & Animations) ---
   simple_animations: ^5.0.2
   sa3_liquid: ^1.0.1
-  intl: 0.20.3
   animations: ^2.0.11
-  flutter_sticky_header: ^0.8.0
-  sticky_and_expandable_list: ^1.1.3
-  fl_chart: ^0.68.0
-  # database dependencies
-  drift: ^2.14.0
-  sqlite3_flutter_libs: ^0.5.0
-  path_provider: ^2.1.3
+  flutter_sticky_header: ^0.8.0 # Hỗ trợ tiêu đề dính (sticky header) cho danh sách chi tiêu
+  sticky_and_expandable_list: ^1.1.3 # Danh sách phân cấp có thể thu gọn/mở rộng
+  fl_chart: ^0.68.0 # Thư viện vẽ biểu đồ thống kê thu chi
+
+  # --- [2] Cơ sở dữ liệu và lưu trữ cục bộ (Local Database & Storage) ---
+  drift: ^2.14.0 # ORM cơ sở dữ liệu SQLite an toàn kiểu dữ liệu (type-safe)
+  sqlite3_flutter_libs: ^0.5.0 # Thư viện driver SQLite cho các nền tảng
+  path_provider: ^2.1.3 # Lấy đường dẫn thư mục lưu trữ cục bộ trên thiết bị
   path: ^1.9.0
-  math_expressions: ^2.5.0
+  shared_preferences: ^2.2.3 # Lưu trữ cài đặt người dùng dạng key-value
+
+  # --- [3] Định dạng ngôn ngữ, thời gian & tính toán (i18n & Utils) ---
+  intl: 0.20.3 # Định dạng tiền tệ, ngày tháng theo chuẩn quốc tế
+  easy_localization: ^3.0.7 # Hỗ trợ đa ngôn ngữ
+  math_expressions: ^2.5.0 # Bộ xử lý phép tính số học khi nhập số tiền chi tiêu
+
   share_plus: ^10.0.0
   google_sign_in: ^6.2.1
   googleapis: ^13.1.0
@@ -46,7 +61,6 @@ dependencies:
       # This fork implements https://github.com/miguelpruivo/flutter_file_picker/issues/1404
       url: https://github.com/melWiss/flutter_file_picker.git
   auto_size_text: ^3.0.0
-  shared_preferences: ^2.2.3
   csv: ^6.0.0
   sliding_sheet:
     path: ./packages/sliding_sheet-0.5.2-modified/
@@ -85,7 +99,6 @@ dependencies:
   flutter_timezone: ^1.0.8
   device_preview: ^3.0.0 
   scrollable_positioned_list: ^0.3.8
-  easy_localization: ^3.0.7
   # simple_shadow: ^0.3.1
   quick_actions: ^1.0.7
   # feature_discovery: ^0.14.1
@@ -137,9 +150,7 @@ flutter:
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
 
-  # For details regarding adding assets from package dependencies, see
-  # https://flutter.dev/assets-and-images/#from-packages
-
+  # --- [4] Cấu hình tài nguyên hình ảnh, biểu tượng và dữ liệu tĩnh ---
   assets:
     - assets/fonts/
     - assets/categories/
