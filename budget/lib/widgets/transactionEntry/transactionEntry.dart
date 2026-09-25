@@ -469,6 +469,10 @@ class TransactionEntry extends StatelessWidget {
                                   ),
                                 ),
                                 SizedBox(width: 5),
+                                // [Nhiệm vụ - Thu Hoài] Đổi vị trí hiển thị số tiền:
+                                // Đưa số tiền (amount) lên phía trước phần mô tả chi tiêu để người dùng nhận biết ngay giá trị giao dịch
+                                amount,
+                                SizedBox(width: 8),
                                 Expanded(
                                   child: Padding(
                                     padding: const EdgeInsetsDirectional.only(
@@ -494,7 +498,6 @@ class TransactionEntry extends StatelessWidget {
                                 ),
                                 if (getIsFullScreen(context))
                                   transactionActionLabelButton,
-                                amount,
                               ],
                             ),
                           ),
@@ -545,6 +548,10 @@ class TransactionEntry extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: 5),
+                  // [Nhiệm vụ - Thu Hoài] Đổi vị trí hiển thị số tiền:
+                  // Chuyển widget amount ra phía trước tên chi tiêu để làm nổi bật số tiền giao dịch
+                  amount,
+                  SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -563,7 +570,6 @@ class TransactionEntry extends StatelessWidget {
                   ),
                   if (getIsFullScreen(context)) transactionActionLabelButton,
                   noteIcon,
-                  amount,
                 ],
               ),
             );
