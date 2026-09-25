@@ -621,9 +621,7 @@ class NavigationSidebarButton extends StatelessWidget {
       scale: iconScale,
       child: Icon(
         icon,
-        color: isSelected
-            ? Theme.of(context).colorScheme.onSecondaryContainer
-            : Theme.of(context).colorScheme.secondary,
+        color: getIconColor(icon),
       ),
     );
     return Padding(

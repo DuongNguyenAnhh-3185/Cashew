@@ -29,7 +29,7 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
     "showExtraInfoText": true,
     "selectedWalletPk": "0",
     "selectedSubscriptionType": 0,
-    "accentColor": toHexString(Color(0xFF1B447A)),
+    "accentColor": toHexString(Color(0xFF4F8FEF)),
     "accentSystemColor": await systemColorByDefault(),
     "widgetOpacity": 1,
     "widgetTheme": "system", //system, light, dark
@@ -171,7 +171,7 @@ Future<Map<String, dynamic>> getDefaultPreferences() async {
     "allSpendingSummaryAllWallets": true,
     "showPastSpendingTrajectory": false,
     "lastSynced": null,
-    "font": "Avenir",
+    "font": "Metropolis",
     "forceSmallHeader": false,
     "animationSpeed": 1.0,
     "logging": false,
