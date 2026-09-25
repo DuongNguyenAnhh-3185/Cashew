@@ -1,3 +1,9 @@
+// ==============================================================================
+// NHIỆM VỤ: CHỈNH SỬA CẤU TRÚC HIỂN THỊ CỦA DANH SÁCH CHI TIÊU
+// Người thực hiện: Thu Hoài
+// Mô tả: Tinh chỉnh bo góc thẻ card và đổi vị trí hiển thị số tiền
+// ==============================================================================
+
 import 'dart:convert';
 import 'package:budget/database/tables.dart';
 import 'package:budget/functions.dart';
@@ -617,7 +623,9 @@ class TransactionEntry extends StatelessWidget {
               bool isTransactionAfterSelected = transactionAfter != null &&
                   globalSelectedID.value[listID ?? "0"]!
                       .contains(transactionAfter?.transactionPk);
-              double borderRadius = getPlatform() == PlatformOS.isIOS ? 7 : 12;
+              // [Nhiệm vụ - Thu Hoài] Bo góc cho các thẻ card chi tiêu:
+              // Tăng độ bo góc lên 18 (thay vì 7 trên iOS và 12 trên Android) để giao diện thẻ mềm mại hơn
+              double borderRadius = 18;
               return ValueListenableBuilder(
                 valueListenable: recentlyAddedTransactionInfo,
                 builder: (context, _, __) {
