@@ -383,34 +383,43 @@ bool isGrayScale(Color color, {int threshold = 10}) {
 }
 
 ColorScheme getColorScheme(Brightness brightness) {
-  if (isGrayScale(
-    getSettingConstants(appStateSettings)["accentColor"],
-    threshold: 15,
-  )) {
-    return getGrayScaleColorScheme(brightness);
-  }
+  const Color mainColor = Color(0xFF0D47A1);
+
   if (brightness == Brightness.light) {
     return ColorScheme.fromSeed(
-      seedColor: getSettingConstants(appStateSettings)["accentColor"],
+      seedColor: mainColor,
       brightness: Brightness.light,
       background: appStateSettings["materialYou"]
-          ? lightenPastel(getSettingConstants(appStateSettings)["accentColor"],
-              amount: 0.91)
+          ? lightenPastel(
+              mainColor,
+              amount: 0.91,
+            )
           : Colors.white,
     );
   } else {
     return ColorScheme.fromSeed(
-      seedColor: getSettingConstants(appStateSettings)["accentColor"],
+      seedColor: mainColor,
       brightness: Brightness.dark,
       background: appStateSettings["forceFullDarkBackground"] == true
           ? Colors.black
           : appStateSettings["materialYou"]
               ? darkenPastel(
-                  getSettingConstants(appStateSettings)["accentColor"],
-                  amount: 0.92)
+                  mainColor,
+                  amount: 0.92,
+                )
               : Colors.black,
     );
   }
+}
+
+Color getIconColor(IconData icon) {
+  const List<Color> iconColors = [
+    Color(0xFF1565C0),
+    Color(0xFFD32F2F),
+    Color(0xFF7B1FA2),
+    Color(0xFFF9A825),
+  ];
+  return iconColors[icon.codePoint.abs() % iconColors.length];
 }
 
 ColorScheme getGrayScaleColorScheme(Brightness brightness) {
@@ -622,6 +631,9 @@ ThemeData getLightTheme() {
     fontFamily: appStateSettings["font"],
     fontFamilyFallback: ['Inter'],
     colorScheme: getColorScheme(brightness),
+    iconTheme: const IconThemeData(
+      color: Color(0xFF0D47A1),
+    ),
     useMaterial3: true,
     applyElevationOverlayColor: false,
     typography: Typography.material2014(),
@@ -639,7 +651,7 @@ ThemeData getLightTheme() {
   return generateThemeDataWithExtension(
     themeData: themeData,
     brightness: brightness,
-    accentColor: getSettingConstants(appStateSettings)["accentColor"],
+    accentColor: const Color(0xFF1769E0),
   );
 }
 
@@ -656,6 +668,9 @@ ThemeData getDarkTheme() {
     fontFamily: appStateSettings["font"],
     fontFamilyFallback: ['Inter'],
     colorScheme: getColorScheme(brightness),
+    iconTheme: const IconThemeData(
+      color: Color(0xFF90CAF9),
+    ),
     useMaterial3: true,
     typography: Typography.material2014(),
     splashColor: getPlatform() == PlatformOS.isIOS
@@ -672,6 +687,6 @@ ThemeData getDarkTheme() {
   return generateThemeDataWithExtension(
     themeData: themeData,
     brightness: brightness,
-    accentColor: getSettingConstants(appStateSettings)["accentColor"],
+    accentColor: const Color(0xFF1769E0),
   );
 }
