@@ -1,27 +1,36 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../core/constants/app_constants.dart';
 import '../../domain/entities/document_entity.dart';
 import '../../domain/entities/document_type.dart';
 import '../../domain/repositories/i_document_repository.dart';
 import '../../domain/services/document_filter_service.dart';
 import '../../domain/services/document_validation_service.dart';
-import '../../core/constants/app_constants.dart';
+import '../../usecases/usecases.dart';
 
-/// Controller quan ly trang thai Presentation Layer theo kien truc Cashew
-/// Ap dung mo hinh Reactive, tu dong dong bo UI khi du lieu thay doi
+/// Controller quản lý trạng thái Presentation Layer theo kiến trúc Cashew
+/// Điều phối tương tác giữa UI và Tầng Use Cases (Logic Nghiệp vụ)
+/// Áp dụng mô hình Reactive Streams, tự động đồng bộ UI khi dữ liệu biến đổi
 class DocumentController extends ChangeNotifier {
-  final IDocumentRepository _repository;
-  final DocumentFilterService _filterService;
+  // Tầng Use Cases (Business Logic Layer)
+  final WatchDocumentsUseCase _watchUseCase;
+  final AddDocumentUseCase _addUseCase;
+  final UpdateDocumentUseCase _updateUseCase;
+  final DeleteDocumentUseCase _deleteUseCase;
+  final SearchDocumentsUseCase _searchUseCase;
+  final ToggleFavoriteUseCase _toggleFavoriteUseCase;
+  final ResetDefaultDataUseCase _resetDefaultDataUseCase;
   final DocumentValidationService _validationService;
+  final DocumentFilterService _filterService;
 
   StreamSubscription<List<DocumentEntity>>? _streamSubscription;
 
-  // Trang thai noi tai
+  // Trạng thái nội tại
   List<DocumentEntity> _allDocuments = [];
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Bo loc va tim kiem
+  // Tiêu chí tìm kiếm & lọc
   String _searchQuery = '';
   String? _selectedSubject;
   DocumentType? _selectedType;
@@ -29,11 +38,36 @@ class DocumentController extends ChangeNotifier {
   DocumentSortOption _sortOption = DocumentSortOption.dateDesc;
 
   DocumentController({
-    required this._repository,
+    required IDocumentRepository repository,
     DocumentFilterService? filterService,
     DocumentValidationService? validationService,
-  })  :         _filterService = filterService ?? const DocumentFilterService(),
-        _validationService = validationService ?? const DocumentValidationService() {
+    AddDocumentUseCase? addUseCase,
+    UpdateDocumentUseCase? updateUseCase,
+    DeleteDocumentUseCase? deleteUseCase,
+    SearchDocumentsUseCase? searchUseCase,
+    WatchDocumentsUseCase? watchUseCase,
+    ToggleFavoriteUseCase? toggleFavoriteUseCase,
+    ResetDefaultDataUseCase? resetDefaultDataUseCase,
+  })  : _filterService = filterService ?? const DocumentFilterService(),
+        _validationService = validationService ?? const DocumentValidationService(),
+        _watchUseCase = watchUseCase ?? WatchDocumentsUseCase(repository),
+        _addUseCase = addUseCase ??
+            AddDocumentUseCase(
+              repository: repository,
+              validationService: validationService ?? const DocumentValidationService(),
+            ),
+        _updateUseCase = updateUseCase ??
+            UpdateDocumentUseCase(
+              repository: repository,
+              validationService: validationService ?? const DocumentValidationService(),
+            ),
+        _deleteUseCase = deleteUseCase ?? DeleteDocumentUseCase(repository),
+        _searchUseCase = searchUseCase ??
+            SearchDocumentsUseCase(filterService ?? const DocumentFilterService()),
+        _toggleFavoriteUseCase =
+            toggleFavoriteUseCase ?? ToggleFavoriteUseCase(repository),
+        _resetDefaultDataUseCase =
+            resetDefaultDataUseCase ?? ResetDefaultDataUseCase(repository) {
     _initialize();
   }
 
@@ -46,12 +80,13 @@ class DocumentController extends ChangeNotifier {
   bool get onlyFavorites => _onlyFavorites;
   DocumentSortOption get sortOption => _sortOption;
   DocumentValidationService get validationService => _validationService;
+  DocumentFilterService get filterService => _filterService;
 
   List<DocumentEntity> get allDocuments => List.unmodifiable(_allDocuments);
 
-  /// Danh sach tai lieu da duoc ap dung toan bo bo loc, tim kiem va sap xep
+  /// Danh sách tài liệu đã được lọc và sắp xếp qua SearchDocumentsUseCase
   List<DocumentEntity> get filteredDocuments {
-    return _filterService.filterAndSort(
+    return _searchUseCase.execute(
       documents: _allDocuments,
       searchQuery: _searchQuery,
       selectedSubject: _selectedSubject,
@@ -61,7 +96,7 @@ class DocumentController extends ChangeNotifier {
     );
   }
 
-  // Thong ke (Analytics) phuc vu UI phong cach Cashew
+  // Thống kê (Analytics) phục vụ UI phong cách Cashew
   int get totalDocumentsCount => _allDocuments.length;
   
   int get favoritesCount => _allDocuments.where((d) => d.isFavorite).length;
@@ -87,7 +122,7 @@ class DocumentController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    _streamSubscription = _repository.watchAllDocuments().listen(
+    _streamSubscription = _watchUseCase.execute().listen(
       (docs) {
         _allDocuments = docs;
         _isLoading = false;
@@ -102,7 +137,7 @@ class DocumentController extends ChangeNotifier {
     );
   }
 
-  // CAC HANH DONG LOC VA TIM KIEM (FILTER ACTIONS)
+  // CÁC HÀNH ĐỘNG LỌC VÀ TÌM KIẾM
   void setSearchQuery(String query) {
     if (_searchQuery != query) {
       _searchQuery = query;
@@ -145,12 +180,12 @@ class DocumentController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // CAC HANH DONG CRUD (BUSINESS OPERATIONS)
+  // CÁC HÀNH ĐỘNG NGHIỆP VỤ QUA TẦNG USE CASES (CRUD)
   Future<bool> addDocument(DocumentEntity document) async {
     try {
       _isLoading = true;
       notifyListeners();
-      await _repository.addDocument(document);
+      await _addUseCase.execute(document);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -166,7 +201,7 @@ class DocumentController extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      await _repository.updateDocument(document);
+      await _updateUseCase.execute(document);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -180,7 +215,7 @@ class DocumentController extends ChangeNotifier {
 
   Future<bool> deleteDocument(String id) async {
     try {
-      await _repository.deleteDocument(id);
+      await _deleteUseCase.execute(id);
       return true;
     } catch (e) {
       _errorMessage = 'Xóa tài liệu thất bại: $e';
@@ -191,7 +226,7 @@ class DocumentController extends ChangeNotifier {
 
   Future<void> toggleFavorite(String id) async {
     try {
-      await _repository.toggleFavorite(id);
+      await _toggleFavoriteUseCase.execute(id);
     } catch (e) {
       _errorMessage = 'Cập nhật yêu thích thất bại: $e';
       notifyListeners();
@@ -202,7 +237,7 @@ class DocumentController extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      await _repository.resetToDefaultData();
+      await _resetDefaultDataUseCase.execute();
       _isLoading = false;
       notifyListeners();
     } catch (e) {

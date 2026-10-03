@@ -1,9 +1,11 @@
 # 📚 Cashew StudyDocs - Ứng Dụng Quản Lý Tài Liệu Học Tập Theo Kiến Trúc Cashew
 
 > **Bài Thực Hành 1 (TH1):** Xây dựng Ứng dụng Quản lý Tài liệu Học tập theo Kiến trúc Cashew  
-> **Nền tảng:** Flutter 3.x (Dart 3.x) - Material 3  
+> **Tham chiếu kiến trúc gốc:** [Cashew - jameskokoska/Cashew](https://github.com/jameskokoska/Cashew)  
 > **Kho mã nguồn:** [GitHub Repository](https://github.com/DuongNguyenAnhh-3185/Cashew.git)  
-> **Báo cáo giải trình chi tiết:** [BAO_CAO_KIEN_TRUC_CASHEW.md](./BAO_CAO_KIEN_TRUC_CASHEW.md)
+> **Tài liệu Thiết kế Use Cases & Sequence Diagrams:** [DESIGN.md](./DESIGN.md)  
+> **Báo cáo Giải trình Kiến trúc Cashew:** [REPORT.md](./REPORT.md) | [BAO_CAO_KIEN_TRUC_CASHEW.md](./BAO_CAO_KIEN_TRUC_CASHEW.md)  
+> **Nền tảng:** Flutter 3.x (Dart 3.x) - Material Design 3  
 
 ---
 
@@ -15,21 +17,21 @@ Hệ thống tập trung tối đa vào **tính phân tách đa tầng (Layer Se
 
 ---
 
-## ✅ Bảng Đối Chiếu 5 Mục Checklist Yêu Cầu
+## ✅ Bảng Đối Chiếu 5 Mục Yêu Cầu
 
-| STT | Mục Yêu Cầu (Checklist) | Tình Trạng | Vị Trí Hiện Thực Trong Mã Nguồn |
+| STT | Mục Yêu Cầu | Tình Trạng | Vị Trí Hiện Thực Trong Mã Nguồn |
 |:---:|:---|:---:|:---|
-| **1** | **Phân tích yêu cầu chức năng & Sơ đồ luồng dữ liệu (Data Flow)** | **ĐẠT 100%** | Sơ đồ luồng dữ liệu chi tiết trong [BAO_CAO_KIEN_TRUC_CASHEW.md](./BAO_CAO_KIEN_TRUC_CASHEW.md) và thiết kế hệ thống tương tác |
-| **2** | **Cấu trúc thư mục & Phân lớp hệ thống theo chuẩn Cashew** | **ĐẠT 100%** | Phân tầng rõ rệt: `core/`, `domain/`, `data/`, `presentation/` |
-| **3** | **Triển khai các chức năng cốt lõi: Thêm, sửa, xóa, tìm kiếm** | **ĐẠT 100%** | Đầy đủ CRUD, tìm kiếm thời gian thực, lọc 5 loại tài liệu, lọc môn học, yêu thích, khôi phục dữ liệu mẫu |
-| **4** | **Kiểm thử tính đúng đắn việc phân tách logic giữa các lớp** | **ĐẠT 100%** | Bộ kiểm thử tự động 17/17 tests pass trên cả 4 tầng (Domain, Data, Presentation, Widget) |
-| **5** | **Đóng gói mã nguồn & Viết báo cáo giải trình kiến trúc** | **ĐẠT 100%** | Tài liệu giải trình toàn diện [BAO_CAO_KIEN_TRUC_CASHEW.md](./BAO_CAO_KIEN_TRUC_CASHEW.md) |
+| **1** | **Tạo file DESIGN.md: Phân tích Use Cases & Sơ đồ luồng dữ liệu (Data Flow / Sequence Diagram) cho Thêm & Tìm kiếm** | **ĐẠT 100%** | Chi tiết trong [DESIGN.md](./DESIGN.md) gồm đặc tả Use Cases, sơ đồ tổng quan Mermaid Data Flow và 2 sơ đồ tuần tự Sequence Diagrams cho Thêm mới & Tìm kiếm |
+| **2** | **Cấu trúc phân tầng sạch: Domain (Entities, Interfaces), Data (Repositories, Storage), UseCases (Logic nghiệp vụ), Presentation (UI/Controllers)** | **ĐẠT 100%** | Phân tầng chuẩn Clean Architecture: `lib/domain/`, `lib/usecases/`, `lib/data/`, `lib/presentation/`, `lib/core/` |
+| **3** | **Viết code hoàn chỉnh cho các chức năng cốt lõi: Thêm, sửa, xóa, tìm kiếm tài liệu học tập (bài giảng, bài tập, tham khảo)** | **ĐẠT 100%** | Đầy đủ CRUD hoàn chỉnh, tìm kiếm thời gian thực, lọc 5 nhóm tài liệu, lọc môn học, yêu thích, khôi phục dữ liệu mẫu |
+| **4** | **Thư mục test/: Bộ Unit Test kèm mock kiểm thử việc phân tách độc lập giữa Use Cases và Tầng Data** | **ĐẠT 100%** | **30/30 tests PASS 100%** qua 9 test suites; có lớp `FakeDocumentRepository` kiểm thử độc lập Use Cases với Data Layer |
+| **5** | **Tạo file REPORT.md giải trình chi tiết về cách kiến trúc Cashew được áp dụng vào hệ thống** | **ĐẠT 100%** | Báo cáo chi tiết trong [REPORT.md](./REPORT.md) và [BAO_CAO_KIEN_TRUC_CASHEW.md](./BAO_CAO_KIEN_TRUC_CASHEW.md) |
 
 ---
 
 ## 🏗️ Kiến Trúc Hệ Thống (Cashew Architecture)
 
-### Sơ đồ Luồng Dữ Liệu (Data Flow Diagram)
+### Sơ đồ Luồng Dữ Liệu Hai Chiều (Data Flow Diagram)
 
 ```mermaid
 flowchart TD
@@ -42,10 +44,18 @@ flowchart TD
         C[DocumentController - ChangeNotifier]
     end
 
+    subgraph UseCases["Tầng Use Cases (Logic Nghiệp vụ Ứng dụng)"]
+        UC1[AddDocumentUseCase]
+        UC2[UpdateDocumentUseCase]
+        UC3[DeleteDocumentUseCase]
+        UC4[SearchDocumentsUseCase]
+        UC5[WatchDocumentsUseCase]
+    end
+
     subgraph Domain["Tầng Domain (Nghiệp vụ cốt lõi - Độc lập 100%)"]
         VS[DocumentValidationService]
         FS[DocumentFilterService]
-        IR["&lt;&lt;Interface&gt;&gt; IDocumentRepository"]
+        IR["<<Interface>> IDocumentRepository"]
         E[DocumentEntity & DocumentType]
     end
 
@@ -57,23 +67,25 @@ flowchart TD
     end
 
     %% Tương tác người dùng
-    V -->|1. Thao tác: Thêm / Sửa / Xóa / Tìm kiếm| C
-    C -->|2. Kiểm tra tính hợp lệ| VS
-    C -->|3. Thuật toán Lọc & Sắp xếp độc lập| FS
-    C -->|4. Gọi nghiệp vụ qua Interface| IR
+    V -->|1. Thao tác CRUD & Lọc| C
+    C -->|2. Gọi nghiệp vụ tương ứng| UseCases
+    UC1 -->|3. Kiểm tra tính hợp lệ| VS
+    UC4 -->|3. Thuật toán Lọc & Sắp xếp độc lập| FS
+    UseCases -->|4. Thao tác dữ liệu qua Interface| IR
     IR -.->|Thực thi triển khai| RI
     RI -->|5. Ánh xạ Entity <-> Model| M
     RI -->|6. Đọc/Ghi dữ liệu| LDS
     LDS -->|7. Lưu trữ lâu dài| SP
 
-    %% Luồng phản ứng thời gian thực (Reactive)
+    %% Luồng phản ứng thời gian thực (Reactive Streams)
     RI -->|8. Phát luồng Stream broadcast| IR
-    IR -.->|9. Cập nhật luồng dữ liệu| C
-    C -->|10. notifyListeners()| V
-    C -->|11. Re-render UI tức thì| W
+    IR -.->|9. Cập nhật luồng dữ liệu| UC5
+    UC5 -.->|10. Luồng Stream cập nhật| C
+    C -->|11. notifyListeners()| V
+    C -->|12. Re-render UI tức thì| W
 ```
 
-### Cấu Trúc Thư Mục Chuẩn Hóa
+### Cấu Trúc Thư Mục Phân Tầng Sạch
 
 ```text
 lib/
@@ -97,6 +109,14 @@ lib/
 │       ├── document_filter_service.dart# Thuật toán tìm kiếm, lọc đa chiều & sắp xếp
 │       └── document_validation_service.dart # Dịch vụ xác thực dữ liệu đầu vào
 │
+├── usecases/                           # Tầng Use Cases (Business Logic Layer)
+│   ├── add_document_usecase.dart       # Use Case: Thêm mới tài liệu
+│   ├── update_document_usecase.dart    # Use Case: Cập nhật tài liệu
+│   ├── delete_document_usecase.dart    # Use Case: Xóa tài liệu
+│   ├── search_documents_usecase.dart   # Use Case: Tìm kiếm & Lọc tài liệu
+│   ├── document_usecases.dart          # WatchDocuments, ToggleFavorite, ResetData
+│   └── usecases.dart                   # Barrel export file
+│
 ├── data/                               # Tầng Xử Lý Dữ Liệu
 │   ├── datasources/
 │   │   └── document_local_data_source.dart # Nguồn lưu trữ nội bộ (SharedPreferences + Seeder)
@@ -107,7 +127,7 @@ lib/
 │
 ├── presentation/                       # Tầng Giao Diện & Trạng Thái
 │   ├── controllers/
-│   │   └── document_controller.dart    # State Controller điều phối luồng dữ liệu
+│   │   └── document_controller.dart    # State Controller điều phối Use Cases & UI
 │   ├── pages/
 │   │   ├── home_page.dart              # Màn hình Dashboard tổng quan tài liệu
 │   │   ├── document_detail_page.dart   # Màn hình chi tiết tài liệu học tập
@@ -127,18 +147,18 @@ lib/
 
 ## ⚡ Các Tính Năng Nổi Bật
 
-1. **Quản lý danh mục học tập phong phú:**
-   - 📖 **Bài giảng:** Slide thuyết trình, giáo trình điện tử.
-   - 📝 **Bài tập & Đồ án:** Đề bài, source code mẫu, bài giải.
-   - 📚 **Sách tham khảo:** Sách chuyên ngành, cẩm nang tra cứu.
-   - 🎯 **Đề thi & Đáp án:** Ngân hàng đề thi, bài trắc nghiệm các năm.
-   - 💡 **Ghi chú & Tóm tắt:** Cheat-sheets, công thức ghi nhớ nhanh.
+1. **Quản lý 5 nhóm học tập cốt lõi:**
+   - 📖 **Bài giảng (Lecture):** Slide thuyết trình, bài giảng điện tử.
+   - 📝 **Bài tập & Đồ án (Exercise):** Đề bài, source code mẫu, bài giải.
+   - 📚 **Sách tham khảo (Reference):** Sách chuyên ngành, cẩm nang tra cứu.
+   - 🎯 **Đề thi & Đáp án (Exam):** Ngân hàng đề thi, bài trắc nghiệm các năm.
+   - 💡 **Ghi chú & Tóm tắt (Note):** Cheat-sheets, công thức ghi nhớ nhanh.
 2. **Thao tác dữ liệu toàn diện (CRUD):**
-   - Thêm tài liệu mới với xác thực form nghiêm ngặt (Validation Service).
+   - Thêm tài liệu mới với xác thực nghiệp vụ nghiêm ngặt (`AddDocumentUseCase` & `DocumentValidationService`).
    - Xem chi tiết tài liệu, định dạng file, dung lượng, sao chép URL nhanh chóng.
-   - Chỉnh sửa linh hoạt mọi thuộc tính (tiêu đề, môn học, dung lượng, tags).
-   - Xóa tài liệu an toàn qua dialog xác nhận.
-3. **Tìm kiếm & Lọc đa chiều (Real-time Filter):**
+   - Chỉnh sửa linh hoạt mọi thuộc tính (`UpdateDocumentUseCase`).
+   - Xóa tài liệu an toàn qua dialog xác nhận (`DeleteDocumentUseCase`).
+3. **Tìm kiếm & Lọc đa chiều (Real-time Filter - `SearchDocumentsUseCase`):**
    - Tìm kiếm tức thời theo từ khóa trong tiêu đề, mô tả, môn học hoặc hashtag.
    - Lọc nhanh theo 5 nhóm tài liệu.
    - Lọc theo từng môn học chuyên biệt.
@@ -146,24 +166,34 @@ lib/
    - Sắp xếp đa dạng: Mới nhất, Cũ nhất, Tiêu đề A-Z, Dung lượng file.
 4. **Trải nghiệm người dùng cao cấp:**
    - Chế độ Giao diện Sáng / Tối (Light / Dark Mode).
-   - Banner phân tích Analytics trực quan (tổng tài liệu, tổng dung lượng MB, tài liệu yêu thích).
+   - Banner phân tích Analytics trực quan phong cách Cashew.
    - Nút khôi phục dữ liệu mẫu (Reset to Default Sample Data).
 
 ---
 
 ## 🧪 Kết Quả Kiểm Thử Tự Động (Automated Testing)
 
-Dự án bao gồm 17 bài kiểm thử đơn vị và tích hợp (100% Pass):
+Dự án bao gồm **30 bài kiểm thử đơn vị, mock và tích hợp** (100% Pass):
 
 ```text
-Ran 17 tests across 5 test suites:
+Ran 30 tests across 9 test suites:
 ✓ test/domain/document_validation_service_test.dart (4 tests)  -> PASS (100%)
 ✓ test/domain/document_filter_service_test.dart (5 tests)      -> PASS (100%)
 ✓ test/data/document_model_test.dart (2 tests)                 -> PASS (100%)
 ✓ test/presentation/document_controller_test.dart (5 tests)   -> PASS (100%)
+✓ test/usecases/add_document_usecase_test.dart (4 tests)       -> PASS (100%)
+✓ test/usecases/delete_document_usecase_test.dart (2 tests)    -> PASS (100%)
+✓ test/usecases/update_document_usecase_test.dart (2 tests)    -> PASS (100%)
+✓ test/usecases/search_documents_usecase_test.dart (5 tests)   -> PASS (100%)
 ✓ test/widget_test.dart (1 widget test)                        -> PASS (100%)
 
-Result: 17/17 tests PASSED. Zero errors, zero warnings.
+Result: 30/30 tests PASSED in 23s. Zero errors, zero failures.
+```
+
+Chạy phân tích mã nguồn tĩnh:
+```text
+flutter analyze
+No issues found!
 ```
 
 ---
@@ -172,7 +202,7 @@ Result: 17/17 tests PASSED. Zero errors, zero warnings.
 
 ### 1. Chuẩn bị môi trường
 - Đã cài đặt Flutter SDK (khuyến nghị phiên bản 3.13 trở lên).
-- Thiết bị chạy (Trình duyệt Chrome, máy ảo Android, hoặc máy tính Windows).
+- Thiết bị chạy (Trình duyệt Chrome, máy tính Windows, hoặc máy ảo Android).
 
 ### 2. Tải mã nguồn & Cài đặt thư viện
 ```bash
@@ -207,5 +237,6 @@ flutter analyze
 
 ---
 
-## 📄 Tài Liệu Báo Cáo
-Vui lòng tham khảo tài liệu [BAO_CAO_KIEN_TRUC_CASHEW.md](./BAO_CAO_KIEN_TRUC_CASHEW.md) để xem chi tiết lý thuyết, giải trình sơ đồ kiến trúc, nguyên tắc thiết kế SOLID và cơ chế phản ứng dữ liệu thời gian thực.
+## 📄 Tài Liệu Thiết Kế & Báo Cáo Giải Trình
+- [DESIGN.md](./DESIGN.md): Đặc tả phân tích Use Cases, sơ đồ luồng dữ liệu (Data Flow) và 2 sơ đồ tuần tự (Sequence Diagrams).
+- [REPORT.md](./REPORT.md): Báo cáo giải trình toàn diện về cách áp dụng kiến trúc Cashew vào đồ án.

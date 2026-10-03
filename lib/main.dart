@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
@@ -9,24 +9,43 @@ import 'domain/services/document_filter_service.dart';
 import 'domain/services/document_validation_service.dart';
 import 'presentation/controllers/document_controller.dart';
 import 'presentation/pages/home_page.dart';
+import 'usecases/usecases.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Khoi tao SharedPreferences cho Data Layer
+  // 1. Khởi tạo Persistent Storage (SharedPreferences)
   final prefs = await SharedPreferences.getInstance();
 
-  // Khoi tao cac thanh phan theo dung kien truc Cashew (Dependency Injection)
+  // 2. Tầng Data (Data Layer)
   final IDocumentLocalDataSource localDataSource = DocumentLocalDataSource(prefs);
   final IDocumentRepository repository = DocumentRepositoryImpl(localDataSource);
+
+  // 3. Tầng Domain Services (Domain Logic)
   const filterService = DocumentFilterService();
   const validationService = DocumentValidationService();
 
-  // Khoi tao Controller cho Presentation Layer
+  // 4. Tầng Use Cases (Business Logic Layer)
+  final watchUseCase = WatchDocumentsUseCase(repository);
+  final addUseCase = AddDocumentUseCase(repository: repository, validationService: validationService);
+  final updateUseCase = UpdateDocumentUseCase(repository: repository, validationService: validationService);
+  final deleteUseCase = DeleteDocumentUseCase(repository);
+  final searchUseCase = SearchDocumentsUseCase(filterService);
+  final toggleFavoriteUseCase = ToggleFavoriteUseCase(repository);
+  final resetDefaultDataUseCase = ResetDefaultDataUseCase(repository);
+
+  // 5. Tầng Presentation (Controller / ViewModel)
   final documentController = DocumentController(
     repository: repository,
     filterService: filterService,
     validationService: validationService,
+    watchUseCase: watchUseCase,
+    addUseCase: addUseCase,
+    updateUseCase: updateUseCase,
+    deleteUseCase: deleteUseCase,
+    searchUseCase: searchUseCase,
+    toggleFavoriteUseCase: toggleFavoriteUseCase,
+    resetDefaultDataUseCase: resetDefaultDataUseCase,
   );
 
   runApp(CashewStudyDocsApp(
@@ -35,7 +54,7 @@ void main() async {
   ));
 }
 
-/// Root Widget cua ung dung
+/// Root Widget của ứng dụng Cashew StudyDocs
 class CashewStudyDocsApp extends StatefulWidget {
   final DocumentController controller;
   final SharedPreferences prefs;
