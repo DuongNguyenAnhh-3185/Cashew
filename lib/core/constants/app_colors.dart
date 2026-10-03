@@ -31,7 +31,9 @@ class AppColors {
   // Document Type Semantic Colors (phân biệt màu theo loại tài liệu)
   static const Color lectureColor = Color(0xFF2563EB); // Xanh dương - Bài giảng
   static const Color exerciseColor = Color(0xFF059669); // Xanh lá - Bài tập
-  static const Color referenceColor = Color(0xFF7C3AED); // Tím - Tài liệu tham khảo
+  static const Color referenceColor = Color(
+    0xFF7C3AED,
+  ); // Tím - Tài liệu tham khảo
   static const Color examColor = Color(0xFFDC2626); // Đỏ - Đề thi & Đáp án
   static const Color noteColor = Color(0xFFD97706); // Cam - Ghi chú tóm tắt
 

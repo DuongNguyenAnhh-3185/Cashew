@@ -1,5 +1,7 @@
-﻿import 'dart:convert';
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../core/constants/app_constants.dart';
 import '../models/document_model.dart';
 import '../../domain/entities/document_type.dart';
@@ -41,8 +43,9 @@ class DocumentLocalDataSource implements IDocumentLocalDataSource {
 
   @override
   Future<void> saveDocuments(List<DocumentModel> documents) async {
-    final List<Map<String, dynamic>> rawList =
-        documents.map((doc) => doc.toJson()).toList();
+    final List<Map<String, dynamic>> rawList = documents
+        .map((doc) => doc.toJson())
+        .toList();
     final jsonString = jsonEncode(rawList);
     await _prefs.setString(AppConstants.storageKeyDocuments, jsonString);
   }
@@ -63,7 +66,8 @@ class DocumentLocalDataSource implements IDocumentLocalDataSource {
         subject: 'Kiến trúc & Thiết kế Phần mềm',
         type: DocumentType.lecture,
         fileFormat: 'PDF',
-        urlOrPath: 'https://storage.edu.vn/lectures/software_architecture_full.pdf',
+        urlOrPath:
+            'https://storage.edu.vn/lectures/software_architecture_full.pdf',
         fileSizeBytes: 14680064,
         createdAt: now.subtract(const Duration(days: 3)),
         updatedAt: now.subtract(const Duration(days: 1)),
@@ -77,7 +81,8 @@ class DocumentLocalDataSource implements IDocumentLocalDataSource {
         subject: 'Lập trình Ứng dụng Di động',
         type: DocumentType.exercise,
         fileFormat: 'DOCX',
-        urlOrPath: 'https://courses.edu.vn/mobile/TH1_QuanLyTaiLieu_Cashew.docx',
+        urlOrPath:
+            'https://courses.edu.vn/mobile/TH1_QuanLyTaiLieu_Cashew.docx',
         fileSizeBytes: 2457600,
         createdAt: now.subtract(const Duration(days: 2)),
         updatedAt: now.subtract(const Duration(hours: 12)),
