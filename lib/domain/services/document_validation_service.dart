@@ -24,10 +24,10 @@ class DocumentValidationService {
     return null;
   }
 
-  /// Kiểm tra đường dẫn hoặc liên kết tài liệu
+  /// Kiểm tra tệp tin học tập đã nộp hoặc đường dẫn lưu trữ
   String? validateUrlOrPath(String? urlOrPath) {
     if (urlOrPath == null || urlOrPath.trim().isEmpty) {
-      return 'Vui lòng cung cấp đường dẫn hoặc URL của tài liệu';
+      return 'Vui lòng nộp tệp hoặc cung cấp tệp tài liệu học tập';
     }
     return null;
   }

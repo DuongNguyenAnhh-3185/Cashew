@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cashew_study_docs/main.dart';
 import 'package:cashew_study_docs/data/datasources/document_local_data_source.dart';
@@ -43,7 +43,7 @@ void main() {
     // Xác nhận Thanh tìm kiếm (SearchAndFilterBar) xuất hiện
     expect(find.byType(SearchAndFilterBar), findsOneWidget);
 
-    // Xác nhận nút Thêm tài liệu nổi (FAB)
-    expect(find.text('Thêm tài liệu'), findsOneWidget);
+    // Xác nhận nút Nộp tài liệu nổi (FAB)
+    expect(find.text('Nộp tài liệu'), findsOneWidget);
   });
 }

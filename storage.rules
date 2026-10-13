@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// ==============================================================================
+// FIREBASE STORAGE SECURITY RULES CHO CASHEW STUDYDOCS
+// Cấu trúc đường dẫn: documents/{userId}/{documentId}/{fileName}
+// ==============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Quy tắc cho thư mục lưu trữ tài liệu học tập
+    match /documents/{userId}/{documentId}/{fileName} {
+      
+      // 1. QUYỀN GHI & XÓA (WRITE / UPDATE / DELETE):
+      // Chỉ DUY NHẤT chủ sở hữu (Firebase UID khớp với userId trên đường dẫn)
+      // mới có quyền tải lên, ghi đè hoặc xóa tệp tin vật lý.
+      allow write, delete: if request.auth != null && request.auth.uid == userId;
+
+      // 2. QUYỀN ĐỌC & TẢI XUỐNG (READ / GET / DOWNLOAD):
+      // - Chủ sở hữu (request.auth.uid == userId) luôn có toàn quyền đọc.
+      // - Đối với người dùng được chia sẻ (Shared Users):
+      //   Do Firebase Storage Rules là môi trường Sandbox độc lập của Google Cloud,
+      //   KHÔNG THỂ truy vấn chéo sang cơ sở dữ liệu Supabase PostgreSQL để kiểm tra
+      //   bảng 'permissions'.
+      //
+      // GIẢI PHÁP & HẠN CHẾ BẢO MẬT:
+      // Option A (Áp dụng bên dưới): Cho phép người dùng đã đăng nhập Firebase (request.auth != null)
+      // được phép đọc nếu biết chính xác đường dẫn tệp.
+      // Ứng dụng Cashew StudyDocs sẽ kiểm tra quyền thông qua Supabase RLS trước:
+      // Người dùng chỉ lấy được 'storage_path' nếu có quyền trong bảng permissions (hoặc là owner).
+      // UUID của document là ngẫu nhiên v4 (128-bit) nên không thể brute-force dò tìm.
+      //
+      // HẠN CHẾ CỦA OPTION A:
+      // Nếu một người dùng độc hại trộm được đường dẫn storage_path (chứa userId, documentId UUID, fileName),
+      // họ có thể tải trực tiếp file bằng Firebase SDK mà không bị chặn ở tầng Storage Rule.
+      //
+      // OPTION B (Nâng cao cho môi trường Production bảo mật cấp cao):
+      // Khóa read ở Storage Rule: allow read: if request.auth != null && request.auth.uid == userId;
+      // Với người được chia sẻ, ứng dụng gọi qua Firebase Cloud Function hoặc Supabase Edge Function
+      // để xác thực JWT + Supabase RLS, sau đó Server sinh Firebase Storage "Signed URL" (có thời hạn 15-30 phút).
+      allow read: if request.auth != null;
+    }
+
+    // Mặc định từ chối toàn bộ các đường dẫn khác ngoài thư mục documents
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

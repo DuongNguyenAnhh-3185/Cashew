@@ -1,12 +1,13 @@
-﻿import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../domain/entities/document_entity.dart';
 import '../../domain/entities/document_type.dart';
 import '../controllers/document_controller.dart';
 
-/// Man hinh Them moi hoac Chinh sua thong tin tai lieu hoc tap
+/// Màn hình Nộp tệp mới (Upload lên Firebase Storage & lưu Supabase) hoặc Chỉnh sửa Metadata
 class DocumentFormPage extends StatefulWidget {
   final DocumentController controller;
   final DocumentEntity? documentToEdit;
@@ -28,19 +29,20 @@ class _DocumentFormPageState extends State<DocumentFormPage> {
 
   late final TextEditingController _titleController;
   late final TextEditingController _descController;
-  late final TextEditingController _urlController;
-  late final TextEditingController _tagsController;
-  late final TextEditingController _sizeController;
   late final TextEditingController _customSubjectController;
 
   late DocumentType _selectedType;
   late String _selectedSubject;
   late String _selectedFormat;
-  late bool _isFavorite;
   bool _isCustomSubject = false;
   bool _isSubmitting = false;
 
-  final List<String> _formatOptions = ['PDF', 'DOCX', 'PPTX', 'XLSX', 'ZIP', 'LINK', 'MP4'];
+  // Trạng thái tệp đã chọn
+  String? _selectedFileName;
+  String? _selectedFilePath;
+  Uint8List? _selectedFileBytes;
+  int _selectedFileSize = 0;
+  bool _isFileSelected = false;
 
   @override
   void initState() {
@@ -49,29 +51,26 @@ class _DocumentFormPageState extends State<DocumentFormPage> {
 
     _titleController = TextEditingController(text: doc?.title ?? '');
     _descController = TextEditingController(text: doc?.description ?? '');
-    _urlController = TextEditingController(text: doc?.urlOrPath ?? '');
-    _tagsController = TextEditingController(text: doc?.tags.join(', ') ?? '');
-    
-    // Dung luong hien thi theo MB
-    final sizeInMb = doc != null ? (doc.fileSizeBytes / (1024 * 1024)).toStringAsFixed(1) : '5.0';
-    _sizeController = TextEditingController(text: sizeInMb);
     _customSubjectController = TextEditingController();
 
     _selectedType = doc?.type ?? DocumentType.lecture;
-    _selectedFormat = doc?.fileFormat.toUpperCase() ?? 'PDF';
-    _isFavorite = doc?.isFavorite ?? false;
+    _selectedFormat = doc?.fileType.toUpperCase() ?? 'PDF';
+
+    if (doc != null) {
+      _isFileSelected = true;
+      _selectedFileName = doc.fileName.isNotEmpty ? doc.fileName : 'Tệp hiện tại';
+      _selectedFileSize = doc.fileSize;
+    }
 
     final existingSubject = doc?.subject;
     if (existingSubject != null && AppConstants.defaultSubjects.contains(existingSubject)) {
       _selectedSubject = existingSubject;
-      _isCustomSubject = false;
-    } else if (existingSubject != null && existingSubject.isNotEmpty) {
+    } else if (existingSubject != null && existingSubject.isNotEmpty && existingSubject != 'Chung') {
       _selectedSubject = 'Khác (Tự nhập)';
-      _customSubjectController.text = existingSubject;
       _isCustomSubject = true;
+      _customSubjectController.text = existingSubject;
     } else {
-      _selectedSubject = AppConstants.defaultSubjects[1];
-      _isCustomSubject = false;
+      _selectedSubject = AppConstants.defaultSubjects.first;
     }
   }
 
@@ -79,80 +78,118 @@ class _DocumentFormPageState extends State<DocumentFormPage> {
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
-    _urlController.dispose();
-    _tagsController.dispose();
-    _sizeController.dispose();
     _customSubjectController.dispose();
     super.dispose();
+  }
+
+  /// Chọn tệp từ thiết bị bằng FilePicker
+  Future<void> _pickFileFromDevice() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'rar', 'mp4', 'txt'],
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        setState(() {
+          _selectedFileName = file.name;
+          _selectedFilePath = file.path;
+          _selectedFileBytes = file.bytes;
+          _selectedFileSize = file.size;
+          _selectedFormat = (file.extension ?? 'PDF').toUpperCase();
+          _isFileSelected = true;
+
+          // Nếu tiêu đề đang để trống thì tự động điền theo tên tệp (bỏ phần mở rộng)
+          if (_titleController.text.trim().isEmpty) {
+            final rawName = file.name.replaceAll(RegExp(r'\.[^.]+$'), '');
+            _titleController.text = rawName.replaceAll('_', ' ');
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể chọn tệp: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final subjectToSave = _isCustomSubject
-        ? _customSubjectController.text.trim()
-        : _selectedSubject;
-
-    if (subjectToSave.isEmpty || subjectToSave == 'Tất cả') {
+    // Kiểm tra quyền chỉnh sửa nếu đang ở chế độ Edit
+    if (widget.isEditing && !widget.documentToEdit!.canEdit) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn hoặc nhập tên môn học hợp lệ')),
+        const SnackBar(
+          content: Text('Bạn chỉ có quyền xem, không được phép chỉnh sửa tài liệu này.'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
+    // Nếu tạo mới thì bắt buộc phải chọn file
+    if (!widget.isEditing && !_isFileSelected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn tệp tài liệu để tải lên.')),
+      );
+      return;
+    }
+
+    final subjectToSave = _isCustomSubject
+        ? _customSubjectController.text.trim()
+        : _selectedSubject;
+
     setState(() => _isSubmitting = true);
 
-    final sizeMb = double.tryParse(_sizeController.text.trim()) ?? 1.0;
-    final fileSizeBytes = (sizeMb * 1024 * 1024).toInt();
-    final parsedTags = widget.controller.validationService.parseTags(_tagsController.text);
-    final now = DateTime.now();
-
     if (widget.isEditing) {
-      final updatedDoc = widget.documentToEdit!.copyWith(
+      // 1. Chế độ Chỉnh sửa: Cập nhật title, description (chỉ owner hoặc editor)
+      final success = await widget.controller.updateDocument(
+        id: widget.documentToEdit!.id,
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
-        subject: subjectToSave,
-        type: _selectedType,
-        fileFormat: _selectedFormat,
-        urlOrPath: _urlController.text.trim(),
-        fileSizeBytes: fileSizeBytes,
-        isFavorite: _isFavorite,
-        tags: parsedTags,
-        updatedAt: now,
       );
 
-      final success = await widget.controller.updateDocument(updatedDoc);
       setState(() => _isSubmitting = false);
 
       if (success && mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cập nhật tài liệu thành công!')),
+          const SnackBar(
+            content: Text('Cập nhật thông tin tài liệu thành công!'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } else {
-      final newDoc = DocumentEntity(
-        id: const Uuid().v4(),
+      // 2. Chế độ Nộp mới: Upload file lên Firebase Storage & lưu Supabase
+      final success = await widget.controller.uploadAndAddDocument(
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
         subject: subjectToSave,
         type: _selectedType,
-        fileFormat: _selectedFormat,
-        urlOrPath: _urlController.text.trim(),
-        fileSizeBytes: fileSizeBytes,
-        createdAt: now,
-        updatedAt: now,
-        isFavorite: _isFavorite,
-        tags: parsedTags,
+        fileName: _selectedFileName ?? 'document.pdf',
+        fileType: _selectedFormat,
+        fileSize: _selectedFileSize,
+        filePath: _selectedFilePath ?? '',
+        fileBytes: _selectedFileBytes,
       );
 
-      final success = await widget.controller.addDocument(newDoc);
       setState(() => _isSubmitting = false);
 
       if (success && mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thêm tài liệu mới thành công!')),
+          const SnackBar(
+            content: Text('Đã tải tệp lên Firebase Storage và lưu vào kho học liệu!'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     }
@@ -161,228 +198,218 @@ class _DocumentFormPageState extends State<DocumentFormPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final subjectItems = widget.controller.availableSubjects
-        .where((s) => s != 'Tất cả')
-        .toList();
-    if (!subjectItems.contains('Khác (Tự nhập)')) {
-      subjectItems.add('Khác (Tự nhập)');
-    }
+    final theme = Theme.of(context);
+    final isEditing = widget.isEditing;
+    final canEdit = !isEditing || (widget.documentToEdit?.canEdit ?? false);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Chỉnh sửa tài liệu' : 'Thêm tài liệu mới'),
+        title: Text(
+          isEditing ? 'Sửa thông tin tài liệu' : 'Nộp tài liệu mới',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Tieu de
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Tiêu đề tài liệu *',
-                hintText: 'Ví dụ: Bài giảng Clean Architecture Chương 1',
-                prefixIcon: Icon(Icons.title_rounded, color: AppColors.primary),
-              ),
-              validator: widget.controller.validationService.validateTitle,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-
-            // Chon Mon hoc
-            DropdownButtonFormField<String>(
-              initialValue: _selectedSubject,
-              decoration: const InputDecoration(
-                labelText: 'Môn học *',
-                prefixIcon: Icon(Icons.school_rounded, color: AppColors.primary),
-              ),
-              items: subjectItems.map((s) {
-                return DropdownMenuItem<String>(
-                  value: s,
-                  child: Text(s, maxLines: 1, overflow: TextOverflow.ellipsis),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _selectedSubject = val;
-                    _isCustomSubject = (val == 'Khác (Tự nhập)');
-                  });
-                }
-              },
-            ),
-            if (_isCustomSubject) ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _customSubjectController,
-                decoration: const InputDecoration(
-                  labelText: 'Nhập tên môn học mới *',
-                  hintText: 'Ví dụ: Kỹ nghệ Phần mềm',
-                  prefixIcon: Icon(Icons.edit_note_rounded, color: AppColors.primary),
-                ),
-                validator: (val) {
-                  if (_isCustomSubject && (val == null || val.trim().isEmpty)) {
-                    return 'Vui lòng nhập tên môn học';
-                  }
-                  return null;
-                },
-              ),
-            ],
-            const SizedBox(height: 16),
-
-            // Loai tai lieu & Dinh dang tep
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: DropdownButtonFormField<DocumentType>(
-                    initialValue: _selectedType,
-                    decoration: const InputDecoration(
-                      labelText: 'Phân loại',
-                      prefixIcon: Icon(Icons.category_rounded, color: AppColors.primary),
-                    ),
-                    items: DocumentType.values.map((type) {
-                      return DropdownMenuItem<DocumentType>(
-                        value: type,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(type.icon, size: 16, color: type.color),
-                            const SizedBox(width: 8),
-                            Text(type.displayName, style: const TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _selectedType = val);
-                    },
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Thông báo nếu không có quyền sửa
+              if (isEditing && !canEdit) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade300),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _formatOptions.contains(_selectedFormat) ? _selectedFormat : 'PDF',
-                    decoration: const InputDecoration(
-                      labelText: 'Định dạng',
-                    ),
-                    items: _formatOptions.map((fmt) {
-                      return DropdownMenuItem<String>(
-                        value: fmt,
-                        child: Text(fmt, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _selectedFormat = val);
-                    },
+                  child: Row(
+                    children: const [
+                      Icon(Icons.lock_outline, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Bạn chỉ có quyền xem tài liệu này. Chỉ Chủ sở hữu hoặc Biên tập viên mới có thể chỉnh sửa.',
+                          style: TextStyle(color: Colors.deepOrange, fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
 
-            // Dung luong & Yeu thich
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _sizeController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Dung lượng (MB)',
-                      hintText: '5.2',
-                      prefixIcon: Icon(Icons.storage_rounded, color: AppColors.primary),
-                      suffixText: 'MB',
-                    ),
-                  ),
+              // Khu vực nộp file vật lý (Chỉ hiển thị khi tạo mới)
+              if (!isEditing) ...[
+                Text(
+                  '1. Tệp tin học tập (Lưu trên Firebase Storage)',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _pickFileFromDevice,
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.surfaceDark : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      color: _isFileSelected
+                          ? AppColors.primary.withOpacity(0.08)
+                          : theme.colorScheme.surfaceVariant.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                        color: _isFileSelected ? AppColors.primary : theme.colorScheme.outlineVariant,
+                        width: _isFileSelected ? 2 : 1,
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
                       children: [
-                        const Text('Yêu thích', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                        Switch(
-                          value: _isFavorite,
-                          activeThumbColor: AppColors.accent,
-                          onChanged: (val) => setState(() => _isFavorite = val),
+                        Icon(
+                          _isFileSelected ? Icons.check_circle_rounded : Icons.cloud_upload_outlined,
+                          size: 44,
+                          color: _isFileSelected ? AppColors.primary : Colors.grey,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _isFileSelected ? _selectedFileName! : 'Nhấn để chọn tệp từ máy tính/thiết bị',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: _isFileSelected ? AppColors.primary : null,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _isFileSelected
+                              ? 'Định dạng: $_selectedFormat • Dung lượng: ${(_selectedFileSize / 1024).toStringAsFixed(1)} KB'
+                              : 'Hỗ trợ PDF, Word (DOCX), PowerPoint (PPTX), Excel, ZIP...',
+                          style: theme.textTheme.bodySmall,
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
               ],
-            ),
-            const SizedBox(height: 16),
 
-            // Duong dan / URL
-            TextFormField(
-              controller: _urlController,
-              decoration: const InputDecoration(
-                labelText: 'Đường dẫn tệp / URL lưu trữ *',
-                hintText: 'https://storage.edu.vn/... hoặc /docs/slides.pdf',
-                prefixIcon: Icon(Icons.link_rounded, color: AppColors.primary),
+              // Phần nhập Metadata
+              Text(
+                isEditing ? 'Thông tin tài liệu' : '2. Thông tin mô tả (Lưu trên Supabase)',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
-              validator: widget.controller.validationService.validateUrlOrPath,
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-            // Tags
-            TextFormField(
-              controller: _tagsController,
-              decoration: const InputDecoration(
-                labelText: 'Thẻ phân loại (cách nhau bởi dấu phẩy)',
-                hintText: 'Clean Architecture, Flutter, OOP, Bài tập lớn',
-                prefixIcon: Icon(Icons.tag_rounded, color: AppColors.primary),
+              // Tiêu đề tài liệu
+              TextFormField(
+                controller: _titleController,
+                enabled: canEdit,
+                decoration: InputDecoration(
+                  labelText: 'Tiêu đề tài liệu *',
+                  hintText: 'Nhập tiêu đề học liệu...',
+                  prefixIcon: const Icon(Icons.title_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().length < 3) {
+                    return 'Tiêu đề tài liệu phải có ít nhất 3 ký tự.';
+                  }
+                  return null;
+                },
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Mo ta
-            TextFormField(
-              controller: _descController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Mô tả chi tiết / Ghi chú',
-                hintText: 'Tóm tắt nội dung tài liệu, nhắc nhở bài tập, kỳ thi...',
-                alignLabelWithHint: true,
+              // Mô tả chi tiết
+              TextFormField(
+                controller: _descController,
+                enabled: canEdit,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: 'Mô tả tóm tắt nội dung',
+                  hintText: 'Nhập tóm tắt bài học, hướng dẫn sử dụng tài liệu...',
+                  alignLabelWithHint: true,
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.only(bottom: 50),
+                    child: Icon(Icons.description_outlined),
+                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-            const SizedBox(height: 28),
+              const SizedBox(height: 16),
 
-            // Nut Submit
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              // Môn học (chỉ chỉnh sửa khi tạo mới hoặc nếu muốn giữ nguyên khi edit)
+              if (!isEditing) ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedSubject,
+                  decoration: InputDecoration(
+                    labelText: 'Môn học *',
+                    prefixIcon: const Icon(Icons.school_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: AppConstants.defaultSubjects.map((s) {
+                    return DropdownMenuItem(value: s, child: Text(s));
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedSubject = val;
+                        _isCustomSubject = (val == 'Khác (Tự nhập)');
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Phân loại tài liệu
+                DropdownButtonFormField<DocumentType>(
+                  value: _selectedType,
+                  decoration: InputDecoration(
+                    labelText: 'Loại học liệu *',
+                    prefixIcon: const Icon(Icons.category_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: DocumentType.values.map((t) {
+                    return DropdownMenuItem(
+                      value: t,
+                      child: Text(t.displayName),
+                    );
+                  }).toList>,
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedType = val);
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Nút Submit
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: (!canEdit || _isSubmitting) ? null : _submitForm,
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Icon(isEditing ? Icons.save_rounded : Icons.cloud_upload_rounded),
+                  label: Text(
+                    _isSubmitting
+                        ? (isEditing ? 'Đang lưu thay đổi...' : 'Đang tải lên Firebase & Supabase...')
+                        : (isEditing ? 'Lưu thay đổi' : 'Xác nhận nộp tài liệu'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
               ),
-              icon: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Icon(widget.isEditing ? Icons.save_rounded : Icons.check_circle_rounded),
-              label: Text(
-                widget.isEditing ? 'Lưu Thay Đổi' : 'Thêm Vào Kho Tài Liệu',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              onPressed: _isSubmitting ? null : _submitForm,
-            ),
-            const SizedBox(height: 40),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -27,8 +27,8 @@ Hệ thống **Cashew StudyDocs** là ứng dụng chuyên biệt hỗ trợ sin
 
 | Mã Use Case | Tên Use Case | Tầng phụ trách | Mô tả ngắn |
 |:---:|:---|:---:|:---|
-| **UC01** | **Thêm mới tài liệu** | `UseCases / AddDocumentUseCase` | Nhập thông tin tài liệu, kiểm tra tính hợp lệ dữ liệu và lưu vào hệ thống |
-| **UC02** | **Cập nhật tài liệu** | `UseCases / UpdateDocumentUseCase` | Chỉnh sửa tiêu đề, mô tả, phân loại, đường dẫn hoặc thẻ tags |
+| **UC01** | **Nộp mới tài liệu** | `UseCases / AddDocumentUseCase` | Nộp tệp tài liệu từ thiết bị, tự động nhận diện dung lượng/định dạng và lưu trữ |
+| **UC02** | **Cập nhật tài liệu** | `UseCases / UpdateDocumentUseCase` | Chỉnh sửa tiêu đề, môn học, đổi tệp đính kèm hoặc thẻ tags |
 | **UC03** | **Xóa tài liệu** | `UseCases / DeleteDocumentUseCase` | Xóa tài liệu khỏi bộ nhớ có hộp thoại xác nhận bảo vệ |
 | **UC04** | **Tìm kiếm & Lọc** | `UseCases / SearchDocumentsUseCase` | Tìm kiếm thời gian thực theo từ khóa, lọc theo loại, môn học, sắp xếp |
 | **UC05** | **Đánh dấu Yêu thích** | `UseCases / ToggleFavoriteUseCase` | Đổi trạng thái quan trọng/yêu thích của tài liệu |
@@ -38,23 +38,25 @@ Hệ thống **Cashew StudyDocs** là ứng dụng chuyên biệt hỗ trợ sin
 
 ### 2.3. Đặc Tả Chi Tiết Hai Use Cases Trọng Tâm
 
-#### 🎯 Use Case UC01: Thêm mới tài liệu học tập (Add Document)
+#### 🎯 Use Case UC01: Nộp mới tài liệu học tập (Submit & Add Document)
 - **Tác nhân:** Sinh viên.
 - **Tiền điều kiện:** Ứng dụng đã khởi tạo thành công và kết nối bộ lưu trữ.
-- **Dữ liệu đầu vào:** Tiêu đề (bắt buộc, >= 3 ký tự), Môn học (bắt buộc), Phân loại tài liệu (`DocumentType`), Định dạng file (PDF, DOCX,...), Đường dẫn/URL (bắt buộc), Dung lượng tệp (MB), Thẻ tags.
+- **Dữ liệu đầu vào:** Tệp tin tải lên từ thiết bị (PDF, Word DOCX, PowerPoint PPTX, Excel XLSX, ZIP,...) hoặc chọn tệp mẫu, Tiêu đề (bắt buộc, >= 3 ký tự), Môn học (bắt buộc), Phân loại tài liệu (`DocumentType`), Định dạng file, Đường dẫn lưu trữ tệp, Dung lượng tệp (MB), Thẻ tags.
 - **Luồng sự kiện chính (Normal Flow):**
   1. Người dùng mở màn hình `DocumentFormPage` từ nút FAB trên `HomePage`.
-  2. Người dùng nhập các thông tin tài liệu và nhấn nút "Lưu tài liệu".
-  3. `DocumentController` tiếp nhận yêu cầu và chuyển dữ liệu sang `AddDocumentUseCase`.
-  4. `AddDocumentUseCase` kích hoạt `DocumentValidationService` để kiểm tra toàn bộ trường dữ liệu.
-  5. Nếu dữ liệu hợp lệ, `AddDocumentUseCase` gọi `IDocumentRepository.addDocument(entity)`.
-  6. `DocumentRepositoryImpl` chuyển đổi `Entity` sang `DocumentModel` và chuyển xuống `DocumentLocalDataSource`.
-  7. `DocumentLocalDataSource` tuần tự hóa JSON và lưu trữ vào `SharedPreferences`.
-  8. `DocumentRepositoryImpl` phát tín hiệu danh sách tài liệu mới vào `StreamController.broadcast()`.
-  9. `DocumentController` nhận dữ liệu từ Stream, gọi `notifyListeners()`.
-  10. Giao diện người dùng tự động re-render và hiển thị thông báo thành công.
+  2. Người dùng nhấn vào "Khu vực Nộp Tệp Học Tập" để chọn tệp tài liệu trực tiếp từ máy tính/thiết bị (thông qua `file_picker`) hoặc bấm chọn nhanh một tệp mẫu có sẵn.
+  3. Hệ thống tự động trích xuất tên tệp, định dạng phần mở rộng và kích thước tệp theo MB, hiển thị thẻ "Tệp Đã Nộp" kèm huy hiệu trạng thái xanh.
+  4. Người dùng xác nhận tiêu đề môn học, loại học liệu và nhấn nút "Xác nhận nộp vào kho học liệu".
+  5. `DocumentController` tiếp nhận yêu cầu và chuyển dữ liệu sang `AddDocumentUseCase`.
+  6. `AddDocumentUseCase` kích hoạt `DocumentValidationService` để kiểm tra toàn bộ trường dữ liệu và tính hợp lệ của tệp đính kèm.
+  7. Nếu dữ liệu hợp lệ, `AddDocumentUseCase` gọi `IDocumentRepository.addDocument(entity)`.
+  8. `DocumentRepositoryImpl` chuyển đổi `Entity` sang `DocumentModel` và chuyển xuống `DocumentLocalDataSource`.
+  9. `DocumentLocalDataSource` tuần tự hóa JSON và lưu trữ vào `SharedPreferences`.
+  10. `DocumentRepositoryImpl` phát tín hiệu danh sách tài liệu mới vào `StreamController.broadcast()`.
+  11. `DocumentController` nhận dữ liệu từ Stream, gọi `notifyListeners()`.
+  12. Giao diện người dùng tự động re-render và hiển thị thông báo thành công.
 - **Luồng ngoại lệ (Exception Flow):**
-  - Nếu tiêu đề < 3 ký tự hoặc môn học rỗng: `DocumentValidationService` phát hiện và ném `ArgumentError` (hoặc hiển thị lỗi validation trên giao diện form), hủy bỏ thao tác ghi dữ liệu.
+  - Nếu chưa nộp tệp hoặc tiêu đề < 3 ký tự hoặc môn học rỗng: `DocumentValidationService` phát hiện và ném `ArgumentError` (hoặc hiển thị lỗi validation trên giao diện form), hủy bỏ thao tác ghi dữ liệu.
 
 ---
 

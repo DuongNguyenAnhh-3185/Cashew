@@ -1,0 +1,12 @@
+{
+  "name": "cashew-firebase-admin-scripts",
+  "version": "1.0.0",
+  "description": "Script gán custom claims cho Firebase Auth phục vụ Supabase Third-Party Auth",
+  "main": "set-custom-claims.js",
+  "scripts": {
+    "set-claims": "node set-custom-claims.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

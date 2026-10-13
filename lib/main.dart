@@ -1,42 +1,77 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
-import 'data/datasources/document_local_data_source.dart';
-import 'data/repositories/document_repository_impl.dart';
+import 'data/repositories/supabase_document_repository.dart';
 import 'domain/repositories/i_document_repository.dart';
 import 'domain/services/document_filter_service.dart';
 import 'domain/services/document_validation_service.dart';
 import 'presentation/controllers/document_controller.dart';
-import 'presentation/pages/home_page.dart';
+import 'presentation/pages/auth_gate.dart';
+import 'services/auth_service.dart';
+import 'services/storage_service.dart';
+import 'services/supabase_service.dart';
 import 'usecases/usecases.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 1. Khởi tạo Persistent Storage (SharedPreferences)
+
+  // 1. Nạp các biến môi trường từ tệp .env (Không hardcode thông tin bí mật)
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint('⚠️ Lưu ý: Không tìm thấy hoặc không thể đọc tệp .env ($e). Sử dụng cấu hình dự phòng.');
+  }
+
+  // 2. Khởi tạo Persistent Storage cục bộ (SharedPreferences cho Theme)
   final prefs = await SharedPreferences.getInstance();
 
-  // 2. Tầng Data (Data Layer)
-  final IDocumentLocalDataSource localDataSource = DocumentLocalDataSource(prefs);
-  final IDocumentRepository repository = DocumentRepositoryImpl(localDataSource);
+  // 3. Khởi tạo Firebase Core
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('⚠️ Firebase.initializeApp thông báo: $e');
+  }
 
-  // 3. Tầng Domain Services (Domain Logic)
+  // 4. Khởi tạo Supabase kết hợp Firebase accessToken
+  try {
+    await SupabaseService.initialize();
+  } catch (e) {
+    debugPrint('⚠️ SupabaseService.initialize thông báo: $e');
+  }
+
+  // 5. Khởi tạo Tầng Services
+  final authService = AuthService();
+  final storageService = StorageService();
+
+  // 6. Khởi tạo Tầng Data & Repository
+  final IDocumentRepository repository = SupabaseDocumentRepository(
+    authService: authService,
+    storageService: storageService,
+  );
+
+  // 7. Khởi tạo Tầng Domain Services
   const filterService = DocumentFilterService();
   const validationService = DocumentValidationService();
 
-  // 4. Tầng Use Cases (Business Logic Layer)
+  // 8. Khởi tạo Tầng Use Cases
   final watchUseCase = WatchDocumentsUseCase(repository);
   final addUseCase = AddDocumentUseCase(repository: repository, validationService: validationService);
   final updateUseCase = UpdateDocumentUseCase(repository: repository, validationService: validationService);
   final deleteUseCase = DeleteDocumentUseCase(repository);
   final searchUseCase = SearchDocumentsUseCase(filterService);
-  final toggleFavoriteUseCase = ToggleFavoriteUseCase(repository);
-  final resetDefaultDataUseCase = ResetDefaultDataUseCase(repository);
+  final shareUseCase = ShareDocumentUseCase(repository);
+  final getPermissionsUseCase = GetDocumentPermissionsUseCase(repository);
+  final updatePermissionRoleUseCase = UpdatePermissionRoleUseCase(repository);
+  final revokePermissionUseCase = RevokePermissionUseCase(repository);
 
-  // 5. Tầng Presentation (Controller / ViewModel)
+  // 9. Khởi tạo Tầng Presentation Controller (ChangeNotifier)
   final documentController = DocumentController(
     repository: repository,
+    authService: authService,
+    storageService: storageService,
     filterService: filterService,
     validationService: validationService,
     watchUseCase: watchUseCase,
@@ -44,12 +79,16 @@ void main() async {
     updateUseCase: updateUseCase,
     deleteUseCase: deleteUseCase,
     searchUseCase: searchUseCase,
-    toggleFavoriteUseCase: toggleFavoriteUseCase,
-    resetDefaultDataUseCase: resetDefaultDataUseCase,
+    shareUseCase: shareUseCase,
+    getPermissionsUseCase: getPermissionsUseCase,
+    updatePermissionRoleUseCase: updatePermissionRoleUseCase,
+    revokePermissionUseCase: revokePermissionUseCase,
   );
 
   runApp(CashewStudyDocsApp(
     controller: documentController,
+    authService: authService,
+    repository: repository,
     prefs: prefs,
   ));
 }
@@ -57,11 +96,15 @@ void main() async {
 /// Root Widget của ứng dụng Cashew StudyDocs
 class CashewStudyDocsApp extends StatefulWidget {
   final DocumentController controller;
+  final AuthService authService;
+  final IDocumentRepository repository;
   final SharedPreferences prefs;
 
   const CashewStudyDocsApp({
     super.key,
     required this.controller,
+    required this.authService,
+    required this.repository,
     required this.prefs,
   });
 
@@ -111,7 +154,10 @@ class _CashewStudyDocsAppState extends State<CashewStudyDocsApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
-      home: HomePage(
+      // AuthGate đóng vai trò cổng điều hướng trạng thái đăng nhập
+      home: AuthGate(
+        authService: widget.authService,
+        repository: widget.repository,
         controller: widget.controller,
         onToggleTheme: _toggleTheme,
         isDarkMode: _themeMode == ThemeMode.dark ||
