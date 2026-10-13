@@ -197,7 +197,6 @@ class _DocumentFormPageState extends State<DocumentFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
     final isEditing = widget.isEditing;
     final canEdit = !isEditing || (widget.documentToEdit?.canEdit ?? false);

@@ -313,8 +313,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 else if (widget.controller.filteredDocuments.isEmpty)
                   SliverFillRemaining(
                     child: EmptyDocumentsView(
-                      searchQuery: widget.controller.searchQuery,
-                      onResetFilters: widget.controller.clearAllFilters,
+                      controller: widget.controller,
+                      onAddDocument: () => _navigateToForm(),
                     ),
                   )
                 else
