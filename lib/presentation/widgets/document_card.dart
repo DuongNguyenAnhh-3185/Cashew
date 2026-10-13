@@ -174,13 +174,7 @@ class _DocumentCardState extends State<DocumentCard> {
       return;
     }
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => DeleteConfirmDialog(
-        documentTitle: widget.document.title,
-        onConfirm: () => Navigator.pop(ctx, true),
-      ),
-    );
+    final confirm = await DeleteConfirmDialog.show(context, widget.document);
 
     if (confirm == true && mounted) {
       final success = await widget.controller.deleteDocument(widget.document);
@@ -428,7 +422,7 @@ class _DocumentCardState extends State<DocumentCard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Cập nhật: ${DateFormatter.formatRelative(widget.document.updatedAt)}',
+                    'Cập nhật: ${DateFormatter.formatRelativeTime(widget.document.updatedAt)}',
                     style: TextStyle(fontSize: 11, color: theme.textTheme.bodySmall?.color),
                   ),
                   if (widget.document.ownerEmail != null && !widget.document.isOwner)

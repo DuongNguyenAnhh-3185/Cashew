@@ -148,6 +148,9 @@ class DocumentController extends ChangeNotifier {
   int get totalStorageBytes =>
       currentTabDocuments.fold(0, (sum, d) => sum + d.fileSizeBytes);
 
+  int getCountByType(DocumentType type) =>
+      currentTabDocuments.where((d) => d.type == type).length;
+
   List<String> get availableSubjects {
     final Set<String> subjects = {'Tất cả'};
     subjects.addAll(AppConstants.defaultSubjects);
